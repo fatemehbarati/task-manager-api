@@ -1,0 +1,17 @@
+{
+    "name": "fatemeh/task-manager-api",
+    "description": "A REST API for managing tasks",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Fatemeh\\TaskManagerApi\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Fatemeh",
+            "email": "fatemehbarati@gmail.com"
+        }
+    ],
+    "require": {}
+}
