@@ -2,9 +2,9 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use Fatemeh\TaskManagerApi\Router;
-use Fatemeh\TaskManagerApi\Models\Task;
+// use Fatemeh\TaskManagerApi\Models\Task;
 
-$task = new Task("First task");
+// $task = new Task("First task");
 // echo $task->title;
 
 $router = new Router;
