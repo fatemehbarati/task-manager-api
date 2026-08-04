@@ -1,6 +1,10 @@
 <?php
 namespace Fatemeh\TaskManagerApi;
 
+use Fatemeh\TaskManagerApi\Exceptions\InvalidException;
+use Fatemeh\TaskManagerApi\Exceptions\NotFoundException;
+use Throwable;
+
 class Router {
     private array $router = [];
 
@@ -25,12 +29,21 @@ class Router {
     }
 
     public function dispatch() : void {
+        try{
+            $this->handleRequest();
+        } catch (NotFoundException|InvalidException $e) {
+            $this->respondWithError($e->getStatusCode(), $e->getMessage());
+        } catch (Throwable $e) {
+            $this->respondWithError(500, "Something went wrong. Please try again later.");
+        }
+    }
+
+    private function handleRequest() : void {
         $method = $_SERVER['REQUEST_METHOD'];
         $path = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 
         if(!isset($this->router[$method])) {
-            $this->notFound();
-            return;
+            throw new NotFoundException("This route does not exist!");
         }
 
         if($path === '') {
@@ -45,7 +58,7 @@ class Router {
             }
         }
 
-        $this->notFound();
+        throw new NotFoundException("This route does not exist!");
     }
 
     private function matchPath(string $pattern, string $path) : array|false {
@@ -68,9 +81,9 @@ class Router {
         return $params;
     }
 
-    private function notFound() : void {
-        http_response_code(404);
+    private function respondWithError(int $statusCode, string $message) : void {
+        http_response_code($statusCode);
         header('Content-Type: application/json');
-        echo json_encode(['error' => 'This route does not exist!']);
+        echo json_encode(['error' => $message]);
     }
 }
