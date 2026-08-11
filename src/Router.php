@@ -1,8 +1,10 @@
 <?php
 namespace Fatemeh\TaskManagerApi;
 
+use Fatemeh\TaskManagerApi\Exceptions\ApiException;
 use Fatemeh\TaskManagerApi\Exceptions\InvalidException;
 use Fatemeh\TaskManagerApi\Exceptions\NotFoundException;
+use Fatemeh\TaskManagerApi\Exceptions\ValidationException;
 use Throwable;
 
 class Router {
@@ -31,7 +33,11 @@ class Router {
     public function dispatch() : void {
         try{
             $this->handleRequest();
+        } catch (ValidationException $e) {
+            $this->respondWithError($e->getStatusCode(), $e->getMessage(), $e->getErrors());
         } catch (NotFoundException|InvalidException $e) {
+            $this->respondWithError($e->getStatusCode(), $e->getMessage());
+        } catch (ApiException $e) {
             $this->respondWithError($e->getStatusCode(), $e->getMessage());
         } catch (Throwable $e) {
             $this->respondWithError(500, "Something went wrong. Please try again later.");
@@ -81,9 +87,13 @@ class Router {
         return $params;
     }
 
-    private function respondWithError(int $statusCode, string $message) : void {
+    private function respondWithError(int $statusCode, string $message, array $errors = []) : void {
         http_response_code($statusCode);
         header('Content-Type: application/json');
-        echo json_encode(['error' => $message]);
+        if(!empty($errors)) {
+            echo json_encode(['errors' => $errors]);
+        } else {
+            echo json_encode(['error' => $message]);
+        }
     }
 }

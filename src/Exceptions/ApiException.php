@@ -5,7 +5,7 @@ use Exception;
 
 class ApiException extends Exception {
     private int $statusCode;
-    public function __construct(string $message = "", int $statusCode = 0,)
+    public function __construct(string $message = "", int $statusCode = 0)
     {
         parent::__construct($message);
         $this->statusCode = $statusCode;
