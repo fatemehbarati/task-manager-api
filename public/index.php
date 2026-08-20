@@ -29,7 +29,6 @@ $router->put('/tasks/{id}', function (int $id) use($taskValidator) : void {
     if (!empty($errors)) {
         throw new ValidationException($errors);
     }
-    
     echo json_encode(['message' => "Task $id is updated", 'data' => $body]);
 });
 $router->delete('/tasks/{id}', function (int $id) : void {

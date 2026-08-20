@@ -16,7 +16,9 @@ class TaskValidator {
             $errors[] = "Title is the wrong type.";
         }elseif (trim($input['title']) === '') {
             $errors[] = "Title should not be empty.";
-        } 
+        }elseif(mb_strlen($input['title']) > 255) {
+            $errors[] = "Title's length should be less than 255 characters.";
+        }
 
         if(array_key_exists('done', $input)) {
             if(!is_bool($input['done'])) {
