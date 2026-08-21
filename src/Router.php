@@ -31,6 +31,7 @@ class Router {
     }
 
     public function dispatch() : void {
+        header('Content-Type: application/json');
         try{
             $this->handleRequest();
         } catch (ValidationException $e) {
@@ -63,7 +64,7 @@ class Router {
                 return;
             }
         }
-
+        
         throw new NotFoundException("This route does not exist!");
     }
 
@@ -83,7 +84,7 @@ class Router {
                 return false;
             }
         }
-
+        
         return $params;
     }
 
