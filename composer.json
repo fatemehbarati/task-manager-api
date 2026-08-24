@@ -15,5 +15,8 @@
     ],
     "require-dev": {
         "jetbrains/phpstorm-stubs": "^2026.2"
+    },
+    "require": {
+        "monolog/monolog": "^3.10"
     }
 }

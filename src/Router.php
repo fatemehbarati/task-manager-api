@@ -5,6 +5,8 @@ use Fatemeh\TaskManagerApi\Exceptions\ApiException;
 use Fatemeh\TaskManagerApi\Exceptions\InvalidException;
 use Fatemeh\TaskManagerApi\Exceptions\NotFoundException;
 use Fatemeh\TaskManagerApi\Exceptions\ValidationException;
+use Fatemeh\TaskManagerApi\Http\Request;
+use Fatemeh\TaskManagerApi\Http\Response;
 use Throwable;
 
 class Router {
@@ -32,8 +34,9 @@ class Router {
 
     public function dispatch() : void {
         header('Content-Type: application/json');
+        $request = Request::fromGlobals();
         try{
-            $this->handleRequest();
+            $this->handleRequest($request);
         } catch (ValidationException $e) {
             $this->respondWithError($e->getStatusCode(), $e->getMessage(), $e->getErrors());
         } catch (NotFoundException|InvalidException $e) {
@@ -42,12 +45,13 @@ class Router {
             $this->respondWithError($e->getStatusCode(), $e->getMessage());
         } catch (Throwable $e) {
             $this->respondWithError(500, "Something went wrong. Please try again later.");
+            $this->respondWithError(500, $e->getMessage());
         }
     }
 
-    private function handleRequest() : void {
-        $method = $_SERVER['REQUEST_METHOD'];
-        $path = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+    private function handleRequest(Request $request) : void {
+        $method = $request->method;
+        $path = $request->path;
 
         if(!isset($this->router[$method])) {
             throw new NotFoundException("This route does not exist!");
@@ -60,7 +64,9 @@ class Router {
         foreach($this->router[$method] as $pattern => $handler) {
             $params = $this->matchPath($pattern, $path);
             if($params !== false) {
-                call_user_func($handler, ...$params);
+                /** @var Response $response */
+                $response = call_user_func($handler, $request, ...$params);
+                $response->send();
                 return;
             }
         }
@@ -89,12 +95,13 @@ class Router {
     }
 
     private function respondWithError(int $statusCode, string $message, array $errors = []) : void {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
+        $body = [];
         if(!empty($errors)) {
-            echo json_encode(['errors' => $errors]);
+            $body = ['errors' => $errors];
         } else {
-            echo json_encode(['error' => $message]);
+            $body = ['error' => $message];
         }
+
+        (new Response($statusCode, $body))->send();
     }
 }
