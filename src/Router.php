@@ -7,36 +7,46 @@ use Fatemeh\TaskManagerApi\Exceptions\NotFoundException;
 use Fatemeh\TaskManagerApi\Exceptions\ValidationException;
 use Fatemeh\TaskManagerApi\Http\Request;
 use Fatemeh\TaskManagerApi\Http\Response;
+use Fatemeh\TaskManagerApi\Middleware\AuthMiddleware;
+use Fatemeh\TaskManagerApi\Middleware\LoggingMiddleware;
 use Throwable;
 
 class Router {
     private array $router = [];
 
-    public function get(string $path, callable $handler) : void {
-        $this->addRouter('GET', $path, $handler);
+    public function __construct(private LoggingMiddleware $loggingMiddleware, private AuthMiddleware $authMiddleware)
+    {
     }
 
-    public function post(string $path, callable $handler) : void {
-        $this->addRouter('POST', $path, $handler);
+    public function get(string $path, callable $handler, array $middleware = []) : void {
+        $this->addRouter('GET', $path, $handler, $middleware);
     }
 
-    public function put(string $path, callable $handler) : void {
-        $this->addRouter('PUT', $path, $handler);
+    public function post(string $path, callable $handler, array $middleware = []) : void {
+        $this->addRouter('POST', $path, $handler, $middleware);
     }
 
-    public function delete(string $path, callable $handler) : void {
-        $this->addRouter('DELETE', $path, $handler);
+    public function put(string $path, callable $handler, array $middleware = []) : void {
+        $this->addRouter('PUT', $path, $handler, $middleware);
     }
 
-    private function addRouter(string $method, string $path, callable $handler): void {
-        $this->router[$method][$path] = $handler;
+    public function delete(string $path, callable $handler, array $middleware = []) : void {
+        $this->addRouter('DELETE', $path, $handler, $middleware);
+    }
+
+    private function addRouter(string $method, string $path, callable $handler, array $middleware = []): void {
+        $this->router[$method][$path] = [
+            'handler' => $handler,
+            'middleware' => $middleware
+        ];
     }
 
     public function dispatch() : void {
         header('Content-Type: application/json');
         $request = Request::fromGlobals();
         try{
-            $this->handleRequest($request);
+            $response = $this->loggingMiddleware->handle($request, $this->handleRequest(...));
+            $response->send();
         } catch (ValidationException $e) {
             $this->respondWithError($e->getStatusCode(), $e->getMessage(), $e->getErrors());
         } catch (NotFoundException|InvalidException $e) {
@@ -49,7 +59,7 @@ class Router {
         }
     }
 
-    private function handleRequest(Request $request) : void {
+    private function handleRequest(Request $request) : Response {
         $method = $request->method;
         $path = $request->path;
 
@@ -61,13 +71,17 @@ class Router {
             $path = '/';
         }
 
-        foreach($this->router[$method] as $pattern => $handler) {
+        foreach($this->router[$method] as $pattern => $route) {
             $params = $this->matchPath($pattern, $path);
             if($params !== false) {
-                /** @var Response $response */
-                $response = call_user_func($handler, $request, ...$params);
-                $response->send();
-                return;
+                $handler = $route['handler'];
+                $middleware = $route['middleware'];
+
+                $finalHandler = fn(Request $req): Response => call_user_func($handler, $req, ...$params);
+                if(in_array('auth', $middleware)) {
+                    $finalHandler = fn(Request $req): Response => $this->authMiddleware->handle($req, $finalHandler);
+                }
+                return $finalHandler($request);
             }
         }
         
