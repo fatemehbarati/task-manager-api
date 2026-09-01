@@ -18,6 +18,12 @@ use Fatemeh\TaskManagerApi\Services\TaskValidator;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
+use Dotenv\Dotenv;
+use Fatemeh\TaskManagerApi\Exceptions\UnauthorizedException;
+use Fatemeh\TaskManagerApi\Services\JwtService;
+
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->load();
 
 $taskValidator = new TaskValidator();
 $dbConnection = (new Connection())->getConnection();
@@ -31,8 +37,10 @@ $apiLogger->pushHandler($streamHandler);
 $logger = new MonologAdapter($apiLogger);
 $logger->log('Info', "Application started");
 
+$jwtService = new JwtService($_ENV['JWT_ACCESS_SECRET'], $_ENV['JWT_REFRESH_SECRET']);
+
 $loggingMiddleware = new LoggingMiddleware($logger);
-$authMiddleware = new AuthMiddleware($logger);
+$authMiddleware = new AuthMiddleware($logger, $jwtService);
 
 $router = new Router($loggingMiddleware, $authMiddleware);
 $router->get('/tasks', function (Request $request) use ($cachedTaskRepository): Response {
@@ -94,5 +102,44 @@ $router->delete('/tasks/{id}', function (Request $request, int $id) use ($cached
     $cachedTaskRepository->delete($id);
     return new Response(200, ['message' => "Task $id is deleted"]);
 }, ['auth']);
+
+
+$router->post('/login', function (Request $request) use ($jwtService): Response {
+    $body = $request->body;
+    if (empty($body['email']) || empty($body['password'])) {
+        return new Response(401, ['error' => 'Invalid email or password.']);
+    }
+
+    $userId = 1;
+    $accessToken = $jwtService->generateAccessToken($userId);
+    $refreshToken = $jwtService->generateRefreshToken($userId);
+
+    return new Response(
+        200,
+        [
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken
+        ]
+    );
+});
+
+$router->post('/refresh', function (Request $request) use ($jwtService): Response {
+    $body = $request->body;
+    
+    if(!array_key_exists('refresh_token', $body)) {
+        throw new UnauthorizedException();
+    }
+
+    $validationResult = $jwtService->validateRefreshToken($body['refresh_token']);
+    $userId = $validationResult['sub'];
+    $accessToken = $jwtService->generateAccessToken($userId);
+
+    return new Response(
+        200,
+        [
+            'access_token' => $accessToken
+        ]
+    );
+});
 
 $router->dispatch();
