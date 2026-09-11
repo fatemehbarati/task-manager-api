@@ -26,7 +26,7 @@ $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 
 $taskValidator = new TaskValidator();
-$dbConnection = (new Connection())->getConnection();
+$dbConnection = Connection::getInstance()->getConnection();
 $taskRepository = new TaskRepository($dbConnection);
 $cache = new RedisCache();
 $cachedTaskRepository = new CachedTaskRepository($taskRepository, $cache);
