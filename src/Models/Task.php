@@ -69,8 +69,8 @@ class Task implements JsonSerializable{
             "id" => $this->id,
             "title" => $this->title,
             "done" => $this->done,
-            "created_at" => $this->created_at->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            "created_at" => $this->created_at->format('c'),
+            'updated_at' => $this->updated_at->format('c'),
         ];
     }
 

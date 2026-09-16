@@ -3,6 +3,7 @@
 namespace Fatemeh\TaskManagerApi;
 
 use Fatemeh\TaskManagerApi\Exceptions\ApiException;
+use Fatemeh\TaskManagerApi\Exceptions\ErrorCode;
 use Fatemeh\TaskManagerApi\Exceptions\InvalidException;
 use Fatemeh\TaskManagerApi\Exceptions\NotFoundException;
 use Fatemeh\TaskManagerApi\Exceptions\UnauthorizedException;
@@ -55,14 +56,11 @@ class Router
             $response = $this->loggingMiddleware->handle($request, $this->handleRequest(...));
             $response->send();
         } catch (ValidationException $e) {
-            $this->respondWithError($e->getStatusCode(), $e->getMessage(), $e->getErrors());
-        } catch (NotFoundException | InvalidException $e) {
-            $this->respondWithError($e->getStatusCode(), $e->getMessage());
-        } catch (ApiException|UnauthorizedException $e) {
-            $this->respondWithError($e->getStatusCode(), $e->getMessage());
+            $this->respondWithError($e->getStatusCode(), $e->getErrorCode(), $e->getMessage(), $e->getErrors());
+        } catch (InvalidException|NotFoundException|ApiException|UnauthorizedException $e) {
+            $this->respondWithError($e->getStatusCode(), $e->getErrorCode(), $e->getMessage());
         } catch (Throwable $e) {
-            $this->respondWithError(500, "Something went wrong. Please try again later.");
-            $this->respondWithError(500, $e->getMessage());
+            $this->respondWithError(500, ErrorCode::InternalError->value, "Something went wrong. Please try again later.");
         }
     }
 
@@ -117,15 +115,8 @@ class Router
         return $params;
     }
 
-    private function respondWithError(int $statusCode, string $message, array $errors = []): void
+    private function respondWithError(int $statusCode, string $errorCode, string $message, array $errors = []): void
     {
-        $body = [];
-        if (!empty($errors)) {
-            $body = ['errors' => $errors];
-        } else {
-            $body = ['error' => $message];
-        }
-
-        (new Response($statusCode, $body))->send();
+        Response::failed($statusCode, $message, $errorCode, $errors)->send();
     }
 }

@@ -45,7 +45,7 @@ $authMiddleware = new AuthMiddleware($logger, $jwtService);
 $router = new Router($loggingMiddleware, $authMiddleware);
 $router->get('/tasks', function (Request $request) use ($cachedTaskRepository): Response {
     $tasks = $cachedTaskRepository->getAll();
-    return new Response(200, ['tasks' => $tasks]);
+    return Response::success(200, $tasks);
 });
 
 $router->get('/tasks/{id}', function (Request $request, int $id) use ($cachedTaskRepository, $logger): Response {
@@ -55,7 +55,7 @@ $router->get('/tasks/{id}', function (Request $request, int $id) use ($cachedTas
         throw new NotFoundException("Task $id not found");
     }
 
-    return new Response(200, ['message' => "Task $id is listed", 'task' => $task]);
+    return Response::success(200, $task->jsonSerialize());
 });
 
 $router->post('/tasks', function (Request $request) use ($taskValidator, $cachedTaskRepository): Response {
@@ -71,7 +71,7 @@ $router->post('/tasks', function (Request $request) use ($taskValidator, $cached
     }
 
     $createdTask = $cachedTaskRepository->add($task);
-    return new Response(200, ['message' => "Task is added", 'Created Task' => $createdTask]);
+    return Response::success(201, $createdTask->jsonSerialize());
 }, ['auth']);
 $router->put('/tasks/{id}', function (Request $request, int $id) use ($taskValidator, $cachedTaskRepository): Response {
     $body = $request->body;
@@ -91,7 +91,7 @@ $router->put('/tasks/{id}', function (Request $request, int $id) use ($taskValid
     }
 
     $cachedTaskRepository->update($task);
-    return new Response(200, ['message' => "Task $id is updated", 'task' => $task]);
+    return Response::success(200, $task->jsonSerialize());
 }, ['auth']);
 $router->delete('/tasks/{id}', function (Request $request, int $id) use ($cachedTaskRepository): Response {
     $task = $cachedTaskRepository->getById($id);
@@ -100,21 +100,21 @@ $router->delete('/tasks/{id}', function (Request $request, int $id) use ($cached
     }
 
     $cachedTaskRepository->delete($id);
-    return new Response(200, ['message' => "Task $id is deleted"]);
+    return Response::success(204);
 }, ['auth']);
 
 
 $router->post('/login', function (Request $request) use ($jwtService): Response {
     $body = $request->body;
     if (empty($body['email']) || empty($body['password'])) {
-        return new Response(401, ['error' => 'Invalid email or password.']);
+        throw new UnauthorizedException("Invalid email or password.");
     }
 
     $userId = 1;
     $accessToken = $jwtService->generateAccessToken($userId);
     $refreshToken = $jwtService->generateRefreshToken($userId);
 
-    return new Response(
+    return Response::success(
         200,
         [
             'access_token' => $accessToken,
@@ -134,7 +134,7 @@ $router->post('/refresh', function (Request $request) use ($jwtService): Respons
     $userId = $validationResult['sub'];
     $accessToken = $jwtService->generateAccessToken($userId);
 
-    return new Response(
+    return Response::success(
         200,
         [
             'access_token' => $accessToken

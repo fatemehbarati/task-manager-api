@@ -4,6 +4,7 @@ namespace Fatemeh\TaskManagerApi\Repositories;
 
 use DateTimeImmutable;
 use Fatemeh\TaskManagerApi\Exceptions\ApiException;
+use Fatemeh\TaskManagerApi\Exceptions\ErrorCode;
 use Fatemeh\TaskManagerApi\Models\Task;
 use PDO;
 
@@ -53,7 +54,7 @@ class TaskRepository implements TaskRepositoryInterface
         $id = (int) $this->db->lastInsertId();
         $createdTask = $this->getById($id);
         if (is_null($createdTask)) {
-            throw new ApiException("Something went wrong!", 500);
+            throw new ApiException("Something went wrong!", 500, ErrorCode::InternalError);
         }
 
         return $createdTask;

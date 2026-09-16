@@ -2,8 +2,8 @@
 namespace Fatemeh\TaskManagerApi\Exceptions;
 
 class UnauthorizedException extends ApiException {
-    public function __construct()
+    public function __construct(string $message = "Invalid or expired token")
     {
-        parent::__construct("Invalid or expired token", 401);
+        parent::__construct($message, 401, ErrorCode::Unauthorized);
     }
 }
