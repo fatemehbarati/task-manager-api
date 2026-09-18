@@ -51,8 +51,8 @@ class Router
     public function dispatch(): void
     {
         header('Content-Type: application/json');
-        $request = Request::fromGlobals();
         try {
+            $request = Request::fromGlobals();
             $response = $this->loggingMiddleware->handle($request, $this->handleRequest(...));
             $response->send();
         } catch (ValidationException $e) {

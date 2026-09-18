@@ -2,6 +2,8 @@
 
 namespace Fatemeh\TaskManagerApi\Http;
 
+use Fatemeh\TaskManagerApi\Exceptions\InvalidException;
+
 class Request
 {
     private array $headers;
@@ -25,7 +27,19 @@ class Request
         $method = $_SERVER['REQUEST_METHOD'];
         $path = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
         $headers = getallheaders();
-        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+        $body = [];
+
+        if (in_array($method, ['POST', 'PUT'])) {
+            $body = json_decode(file_get_contents('php://input'), true);
+
+            if (
+                json_last_error() !== JSON_ERROR_NONE ||
+                !is_array($body) ||
+                (array_is_list($body) && !empty($body))
+            ) {
+                throw new InvalidException();
+            }
+        }
 
         return new self($method, $path, $headers, $body);
     }
